@@ -7,10 +7,17 @@
 //
 
 #import "UIImageView+JMRadius.h"
-#if __has_include(<YYWebImage/UIImageView+YYWebImage.h>)
-#import <YYWebImage/UIImageView+YYWebImage.h>
+
+#if __has_include(<SDWebImage/UIImageView+WebCache.h>)
+#import <SDWebImage/UIImageView+WebCache.h>
 #else
-#import "UIImageView+YYWebImage.h"
+#import "UIImageView+WebCache.h"
+#endif
+
+#if __has_include(<SDWebImage/UIView+WebCache.h>)
+#import <SDWebImage/UIView+WebCache.h>
+#else
+#import "UIView+WebCache.h"
 #endif
 
 @implementation UIImageView (JMRadius)
@@ -33,17 +40,18 @@
 
 - (void)jm_setImageWithJMRadius:(JMRadius)radius imageURL:(NSURL *)imageURL placeholder:(UIImage *)placeholder borderColor:(UIColor *)borderColor borderWidth:(CGFloat)borderWidth backgroundColor:(UIColor *)backgroundColor contentMode:(UIViewContentMode)contentMode size:(CGSize)size {
     
+    NSString *imageKey = [[SDWebImageManager sharedManager] cacheKeyForURL:imageURL];
+    
     NSString *transformKey =  [NSString stringWithFormat:@"%@%@%.1f%@%li%@", NSStringFromJMRadius(radius), borderColor.description, borderWidth, backgroundColor.description, (long)contentMode,NSStringFromCGSize(size)];
-    NSString *transformImageKey = [[YYWebImageManager sharedManager] cacheKeyForURL:imageURL transformKey:transformKey];
-    UIImage *cacheImage = [[YYWebImageManager sharedManager].cache getImageForKey:transformImageKey];
+    NSString *transformImageKey = [NSString stringWithFormat:@"%@--%@", imageKey, transformKey];
+    UIImage *cacheImage = [[SDWebImageManager sharedManager].imageCache imageFromCacheForKey:transformImageKey];
     
     if (cacheImage) {
         self.image = cacheImage;
         return;
     }
     
-    NSString *imageKey = [[YYWebImageManager sharedManager] cacheKeyForURL:imageURL transformKey:nil];
-    cacheImage = [[YYWebImageManager sharedManager].cache getImageForKey:imageKey];
+    cacheImage = [[SDWebImageManager sharedManager].imageCache imageFromCacheForKey:imageKey];
     
     if (cacheImage) {
         self.image = [UIImage jm_setJMRadius:radius image:cacheImage size:size borderColor:borderColor borderWidth:borderWidth backgroundColor:backgroundColor withContentMode:contentMode];
@@ -52,18 +60,33 @@
     
     UIImage *placeholderImage;
     if (placeholder || borderWidth > 0 || backgroundColor) {
-        placeholderImage = [[YYWebImageManager sharedManager].cache getImageForKey:transformKey];
+        placeholderImage = [[SDWebImageManager sharedManager].imageCache imageFromCacheForKey:transformKey];
         if (!placeholderImage) {
             placeholderImage = [UIImage jm_setJMRadius:radius image:placeholder size:size borderColor:borderColor borderWidth:borderWidth backgroundColor:backgroundColor withContentMode:contentMode];
-            [[YYWebImageManager sharedManager].cache setImage:placeholderImage forKey:transformKey];
+            [[SDWebImageManager sharedManager].imageCache storeImage:placeholderImage forKey:transformKey completion:nil];
         }
     }
     
-    [self yy_setImageWithURL:imageURL placeholder:placeholderImage options:kNilOptions progress:nil transform:^UIImage * _Nullable(UIImage * _Nonnull image, NSURL * _Nonnull url) {
-        [[YYWebImageManager sharedManager].cache setImage:image forKey:imageKey];
-        UIImage *currentImage = [UIImage jm_setJMRadius:radius image:image size:size borderColor:borderColor borderWidth:borderWidth backgroundColor:backgroundColor withContentMode:contentMode];
-        return currentImage;
-    } transformKey:transformKey completion:^(UIImage * _Nullable image, NSURL * _Nonnull url, YYWebImageFromType from, YYWebImageStage stage, NSError * _Nullable error) {
+    __weak __typeof(self)wself = self;
+    
+    [self sd_internalSetImageWithURL:imageURL placeholderImage:placeholderImage options:kNilOptions operationKey:nil setImageBlock:^(UIImage * _Nullable image, NSData * _Nullable imageData) {
+        
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+            
+            UIImage *currentImage = [UIImage jm_setJMRadius:radius image:image size:size borderColor:borderColor borderWidth:borderWidth backgroundColor:backgroundColor withContentMode:contentMode];
+            
+            dispatch_main_async_safe(^{
+                
+                __strong __typeof (wself) sself = wself;
+                
+                if ([sself isKindOfClass:[UIImageView class]]) {
+                    UIImageView *imageView = (UIImageView *)sself;
+                    imageView.image = currentImage;
+                }
+            });
+        });
+        
+    } progress:nil completed:^(UIImage * _Nullable image, NSError * _Nullable error, SDImageCacheType cacheType, NSURL * _Nullable imageURL) {
     }];
 }
 

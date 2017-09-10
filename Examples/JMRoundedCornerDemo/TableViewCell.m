@@ -8,7 +8,6 @@
 
 #import "TableViewCell.h"
 #import "JMRoundedCorner.h"
-#import "UIImageView+YYWebImage.h"
 
 @interface TableViewCell ()
 
