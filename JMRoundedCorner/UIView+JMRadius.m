@@ -81,13 +81,21 @@ static char jm_operationKey;
                 _size = weakSelf.bounds.size;
             });
         }
+        
+        /** 去掉Rect的pixel处理
         CGSize pixelSize = CGSizeMake(pixel(_size.width), pixel(_size.height));
+         */
+        CGSize pixelSize = _size;
         UIImage *currentImage = [UIImage jm_setJMRadius:radius image:(UIImage *)image size:pixelSize borderColor:borderColor borderWidth:borderWidth backgroundColor:backgroundColor withContentMode:contentMode];
         
         [[NSOperationQueue mainQueue] addOperationWithBlock:^{
             __strong typeof(weakSelf) self = weakSelf;
             if ([[self jm_getOperation] isCancelled]) return;
+            
+            /** 其视图大小由外部决定
             self.frame = CGRectMake(pixel(self.frame.origin.x), pixel(self.frame.origin.y), pixelSize.width, pixelSize.height);
+             */
+             
             if ([self isKindOfClass:[UIImageView class]]) {
                 ((UIImageView *)self).image = currentImage;
             } else if ([self isKindOfClass:[UIButton class]] && image) {
