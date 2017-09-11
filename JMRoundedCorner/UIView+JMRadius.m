@@ -113,10 +113,12 @@ static char jm_operationKey;
     [jm_operationQueue addOperation:blockOperation];
 }
 
+/**
 static inline CGFloat pixel(CGFloat num) {
     CGFloat unit = 1.0 / [UIScreen mainScreen].scale;
     CGFloat remain = fmod(num, unit);
     return num - remain + (remain >= unit / 2.0? unit: 0);
 }
+ */
 
 @end
