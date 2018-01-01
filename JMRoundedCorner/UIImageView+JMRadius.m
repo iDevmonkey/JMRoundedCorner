@@ -59,12 +59,8 @@
     }
     
     UIImage *placeholderImage;
-    if (placeholder || borderWidth > 0 || backgroundColor) {
-        placeholderImage = [[SDWebImageManager sharedManager].imageCache imageFromCacheForKey:transformKey];
-        if (!placeholderImage) {
-            placeholderImage = [UIImage jm_setJMRadius:radius image:placeholder size:size borderColor:borderColor borderWidth:borderWidth backgroundColor:backgroundColor withContentMode:contentMode];
-            [[SDWebImageManager sharedManager].imageCache storeImage:placeholderImage forKey:transformKey completion:nil];
-        }
+    if (placeholder || borderWidth > 0 || backgroundColor){
+        placeholderImage = [UIImage jm_setJMRadius:radius image:placeholder size:size borderColor:borderColor borderWidth:borderWidth backgroundColor:backgroundColor withContentMode:contentMode];
     }
     
     __weak __typeof(self)wself = self;
